@@ -1,3 +1,8 @@
+hex_board.py
+main.py
+utils.py
+
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
