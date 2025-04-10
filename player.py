@@ -8,7 +8,8 @@ class Player:
         
 
     def play(self, board: HexBoard) -> tuple:
-        raise NotImplementedError("¡Implementa este método!")
+        moves = board.get_possible_moves()
+        return moves[0]
     
 class AIPlayer:
     def _init_(self, player_id: int, depth: int = 3):
@@ -32,7 +33,7 @@ class AIPlayer:
             board_clone = board.clone()
             row, col = move
             board_clone.place_piece(row, col, self.player_id)
-            move_eval = self.minimax(False, -math.inf, math.inf, 3, board_clone):
+            move_eval = self.minimax(False, -math.inf, math.inf, 3, board_clone)
             
             if best_move_eval < move_eval:
                 best_move = move
