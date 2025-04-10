@@ -1,5 +1,6 @@
 from hex_board import HexBoard
 import math
+import heapq
 
 class Player:
     def __init__(self, player_id: int):
@@ -11,7 +12,7 @@ class Player:
     
 class AIPlayer:
     def _init_(self, player_id: int, depth: int = 3):
-        super().__init__(player_id)
+        self.player_id = player_id
         self.depth = depth
         
         if player_id == 1: self.enemy_id = 2
@@ -61,10 +62,113 @@ class AIPlayer:
 
             return current_beta
         
-        pass
-
+    # implementacion de la evaluacion del tablero
     def eval(self, board: HexBoard):
-        pass
+        # verificamos conexiones completas, de la ia o del enemy, cualquiera de las 2 es un return automatico
+        if board.check_connection(self.player_id): return math.inf
+        if board.check_connection(self.enemy_id): return -math.inf
 
-    def get_directions():
+        #iaplayer_score = # combinacion lineal de intrigas( condiciones, bloqueos, etc) todas positivas
+        #enemy_score = # misma intriga
+
+        #return iaplayer_score - enemy_score 
         pass
+    
+    def path_score(self, board: HexBoard, for_player: int) -> float:
+        
+        
+        pass
+    
+    # implementacion de a star para encontrar caminos de costo minimo
+    def a_star_init(self, board: HexBoard, for_player: int) -> float: 
+        pair_dir = self.get_directions(True) # direcciones para filas par
+        odd_dir = self.get_directions(False) # direcciones para filas impares
+        
+                   
+
+        pass
+    def a_star(self, board:HexBoard, for_player: int, tracking_taken_tiles: list, pair_dir, odd_dir) -> float:
+        # determinar si vamos hor o vert
+        if for_player == 1:
+            start = [] # lista de los nodos de inicio
+            for i in range (board.size):
+                tile_val = board.board[i][0]
+                if tile_val == for_player or tile_val == 0:
+                    start[i] = tile_val #le asignamos el valor inicial
+                    if tile_val == for_player: tracking_taken_tiles[i] = tracking_taken_tiles[i]+1  
+        else:
+            start = []
+            for i in range (board.size):
+                if board.board[0][i] == for_player:
+                    start.append([0,i]) 
+        pass
+    
+
+    
+    # implementacion para obtener un estimado de cuanto falta para completar el camino de costo minimo
+    def get_a_star_heuristic() -> float:
+        pass
+    # implementacion para obtener los vecinos disponibles de un nodo en especifico
+    def get_neighbor(self, board: HexBoard, row: int, col: int, enemy: int) -> list:
+        neighbors = [] # aqui guardamos los vecinos del nodo en que estemos
+        board_size_odd = board.size%2 # obtenemos la paridad del tamano del tablero para saber si el la ultima fila es par o impar
+
+        if row%2 == 0: 
+            pair_dir = self.get_directions(True)
+
+            for p in pair_dir:
+                prow, pcol = p
+                
+                if row == 0 and prow == -1: continue # a partir de aqui se ignoran salidas de limites
+                if col == 0 and pcol == -1: continue 
+                if col == board.size-1 and pcol == 1: continue
+                if not board_size_odd and row == board.size-1 and prow == 1: continue
+                
+                neighbors.append(board.board[row + prow][col + pcol]) # agregamos el vecino para su posible recorrido
+        else:
+            # lo mismo pero para filas impares
+            odd_dir = self.get_directions(False)
+
+            for o in odd_dir:
+                orow, ocol = o
+                
+                if col == 0 and ocol == -1: continue
+                if col == board.size-1 and ocol == 1: continue
+                if board_size_odd and row == board.size-1 and orow == 1: continue
+
+                neighbors.append(board.board[row+orow][col+ocol])
+        
+        return neighbors
+
+    # implementacion para determinar cuanto cuesta moverse a una determinada casilla
+    def get_cost(self, board:HexBoard, row:int, col:int, for_player: int)-> int:
+        
+        if board.board[row][col] == for_player: return 0 # si ya esta controlada por el jugador el costo es 0
+        if board.board[row][col] == 0: return 1 # si no esta controlada por ninguno el costo es 1
+        
+        return -1 # si esta controlada por el oponente no se puede tomar este camino: el costo es negativo
+
+    # direcciones apropiadas segun la docu para even-r
+    def get_directions(self, parity: bool):
+        
+            #impares
+        if not parity:
+            return [
+                (0, -1),   # izq
+                (0, 1),    # der
+                (-1, 0),    # arriba
+                (1, 0),     # abajo
+                (-1, -1),   # arriba-izq
+                (1, -1)     # abajo-izq
+            ]
+        # pares
+        else: 
+            return [
+                (0, -1),   # izq
+                (0, 1),    # der
+                (-1, 0),    # arrib
+                (1, 0),     # abaj
+                (-1, 1),    # arrib-der
+                (1, 1)      # abaj-der
+            ]
+        
