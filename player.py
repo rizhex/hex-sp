@@ -55,7 +55,6 @@ class AIPlayer:
         center_r = board.size // 2
         return (center_q, center_r)
     
-
     # implementacion de minimax
     def minimax(self, player_turn: bool, alpha: float, beta: float, depth: int, board: HexBoard) -> float:
         #caso base: paro si llegue al maximo de profundidad admitido, gana la ia o el oponente
@@ -102,14 +101,26 @@ class AIPlayer:
         # verificamos conexiones completas, de la ia o del enemy, cualquiera de las 2 es un return automatico
         if board.check_connection(self.player_id): return math.inf
         if board.check_connection(self.enemy_id): return -math.inf
+        
+        iap_a_star_score, iap_a_star_path = self.a_star_init(board, self.player_id)
+        en_a_star_score, en_a_star_path = self.a_star_init(board, self.enemy_id)
+        critical_point_score = self.eval_critical_point(board, iap_a_star_path, en_a_star_path)
 
-        iaplayer_score = self.a_star_init(board, self.player_id) # combinacion lineal de intrigas( condiciones, bloqueos, etc) todas positivas
+        iaplayer_score = self.a_star_init(board, self.player_id) + critical_point_score  # combinacion lineal de intrigas( condiciones, bloqueos, etc) todas positivas
         enemy_score = self.a_star_init(board, self.enemy_id) # misma intriga
 
         return iaplayer_score - enemy_score 
-       
+
+    def eval_critical_point(self, board: HexBoard, ia_path: list, enemy_path: list) -> float:
+        for ia_node in ia_path:
+            if ia_node in enemy_path:
+                row, col = ia_node
+                if board[row][col] == self.player_id: return 3
+                elif board[row][col] == self.enemy_id: return -3
+                else: return 0
+        
     # implementacion de a star para encontrar caminos de costo minimo
-    def a_star_init(self, board: HexBoard, for_player: int) -> float:
+    def a_star_init(self, board: HexBoard, for_player: int) -> tuple[float, list]: 
         start = [] # lista de los nodos de inicio
         end = [] # lista para almacenar los nodos objetivos
 
@@ -126,14 +137,15 @@ class AIPlayer:
                         end.append([board.size-1, i]) 
             
         best = self.a_star(board, for_player, start, end)
-        return board.size*10-best        
+        best_sc, best_p = best
+        return board.size*10-best_sc, best_p         
 
-    def a_star(self, board:HexBoard, for_player: int, start: list, end: list) -> int:
+    def a_star(self, board:HexBoard, for_player: int, start: list, end: list) -> tuple[float, list]:
         
         open_set = [] # nodos iniciales
         g_score = {} # costos reales desde el inicio
         f_score = {} # costos estimado, (g + h) h: self.hex_distance
-        
+        came_from = {}
         for node_s in start:
             r, c = node_s
             g_score[node_s] = self.get_cost(board, r, c, for_player) # guardamos el coste del nodo inicial
@@ -153,17 +165,26 @@ class AIPlayer:
 
             # si llegamos al final devolvemos el costo del camino
             if current in end:  
-                return g_score[current]
+                path = []
+                score_f = g_score[current]
+                while current is not None:
+                    path.append(current)
+                    current = came_from[current]
+                path.reverse()
+                return (score_f, path)
             
             r, c = current 
             # recorremos todos los vecinos de este nodo
             for neighbor in self.get_neighbor(board, r, c, for_player):
                 nr, nc = neighbor
-                current_neighbor_cost = self.get_cost(board, nr, nc, for_player) # obetenemos el costo de movernos hacia aqui para el jugador
-                if current_neighbor_cost == -1: continue # si el vecino esta ocupado por el enemigo nos lo saltamos
-            
+                
+                temp_cost =  self.get_cost(board, nr, nc, for_player)
+                if temp_cost == -1: continue # si el vecino esta ocupado por el enemigo nos lo saltamos
+                current_neighbor_cost = g_score(current) + temp_cost # obetenemos el costo de movernos hacia aqui para el jugador
+                
                 # verificamos si el nodo es nuevo, o si no es nuevo si llegamos a el con un menor costo(mejor camino)
                 if (neighbor not in g_score) or g_score[neighbor] > current_neighbor_cost: 
+                    came_from[neighbor] = current # le asociamos de donde vino en el mejor camino
                     g_score[neighbor] = current_neighbor_cost # en caso de que si: actualizamos su costo
 
                     # estimamos cuanto falta hasta un nodo objetivo usando nuestra heuristica dependiendo del jugador
@@ -178,7 +199,7 @@ class AIPlayer:
                         heapq.heappush(open_set, (f_score[neighbor], neighbor))
                         open_set_hash.add(neighbor)
         # en caso de no encontrar ningun camino significa que el jugador perdio: puntuacion -infinito
-        return -math.inf
+        return -math.inf, []
     
     # implementacion para obtener un estimado de cuanto falta para completar el camino de costo minimo
     def hex_distance(self, p1: tuple[int,int], p2: tuple[int,int]):
