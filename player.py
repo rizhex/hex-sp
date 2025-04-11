@@ -22,7 +22,8 @@ class AIPlayer:
         print(f"soy ia soy player {player_id}")
     def play(self, board:HexBoard) -> tuple:
         
-        if self.not_checked:
+        # verificamos si somos los primeos, en cuyo caso jugamos en el medio, creo que hay mas ventaja empezando x ahi :)
+        if self.not_checked: 
             self.not_checked = False
             if self.is_empty_board(board): 
                 return self.first_move(board)
@@ -33,7 +34,7 @@ class AIPlayer:
         first = True
 
         for move in board.get_possible_moves():
-            if first:
+            if first: # x si acaso ponemos el primer movimiento posible como el mejor... no vaya a ser
                 board_clone = board.clone()
                 best_move = move
                 board_clone.place_piece(best_move[0], best_move[1], self.player_id)
@@ -48,10 +49,9 @@ class AIPlayer:
             if best_move_eval < move_eval:
                 best_move = move
                 best_move_eval = move_eval
-
-        print(f"soy ia jugue en {best_move}")
         return best_move
     
+    # implementacion ahi pa detectar si el tablero esta vacio
     def is_empty_board(self, board: HexBoard):
         
         for row in board.board:
@@ -61,12 +61,11 @@ class AIPlayer:
         return True
 
             
-
     def first_move(self, board: HexBoard):
 
-        center_q = len(board.board) // 2
-        center_r = len(board.board) // 2
-        return (center_q, center_r)
+        row = len(board.board) // 2
+        col = len(board.board) // 2
+        return (row, col)
     
     # implementacion de minimax
     def minimax(self, player_turn: bool, alpha: float, beta: float, depth: int, board: HexBoard) -> float:
