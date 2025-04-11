@@ -147,8 +147,9 @@ class AIPlayer:
         else:
             start = []
             for i in range (board.size):
-                        start.append((0, i))
-                        end.append((board.size-1, i)) 
+                if board.board[0][i] == 1: continue                
+                start.append((0, i))
+                end.append((board.size-1, i)) 
             
         best = self.a_star(board, for_player, start, end)
         best_sc, best_p = best
@@ -164,9 +165,11 @@ class AIPlayer:
             r, c = node_s
             g_score[node_s] = self.get_cost(board, r, c, for_player) # guardamos el coste del nodo inicial
             came_from[node_s] = None
-
+            
+            min_h = math.inf
             # encontramos el valor minimo necesario para llegar al otro lado    
-            for node_f in end: min_h = min(min_h, self.hex_distance(node_s, node_f) )
+            
+            for node_f in end: min_h = min(min_h, self.hex_distance(node_s, node_f))
                     
 
             f_score[node_s] = g_score[node_s] + min_h # guardamos el costo estimado: costo real(g) + costo faltante estimado(h)
@@ -203,7 +206,8 @@ class AIPlayer:
                     g_score[neighbor] = current_neighbor_cost # en caso de que si: actualizamos su costo
 
                     # estimamos cuanto falta hasta un nodo objetivo
-                    for node_f in end: min_h = min(min_h, self.hex_distance(neighbor, end))
+                    min_h = math.inf
+                    for node_f in end: min_h = min(min_h, self.hex_distance(neighbor, node_f))
 
                     f_score[neighbor] = current_neighbor_cost + min_h # estimacion del costo total del camino
 
