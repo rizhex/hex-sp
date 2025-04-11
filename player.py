@@ -38,13 +38,13 @@ class AIPlayer:
                 board_clone = board.clone()
                 best_move = move
                 board_clone.place_piece(best_move[0], best_move[1], self.player_id)
-                best_move_eval = self.minimax(False, -math.inf, math.inf, self.depth, board_clone)
+                best_move_eval = self.minimax(False, -math.inf, math.inf, self.depth-1, board_clone)
                 first = False
                 continue
             board_clone = board.clone()
             row, col = move
             board_clone.place_piece(row, col, self.player_id)
-            move_eval = self.minimax(False, -math.inf, math.inf, self.depth, board_clone)
+            move_eval = self.minimax(False, -math.inf, math.inf, self.depth-1, board_clone)
           
             if best_move_eval < move_eval:
                 best_move = move
