@@ -164,9 +164,10 @@ class AIPlayer:
             r, c = node_s
             g_score[node_s] = self.get_cost(board, r, c, for_player) # guardamos el coste del nodo inicial
             came_from[node_s] = None
-            # encontramos el valor minimo necesario para llegar al otro lado: linea recta, osea el nodo directamente opuesto
-            if for_player == 1: min_h = self.hex_distance(node_s, (r, board.size-1))
-            else: min_h = self.hex_distance(node_s, (board.size-1, c))
+
+            # encontramos el valor minimo necesario para llegar al otro lado    
+            for node_f in end: min_h = min(min_h, self.hex_distance(node_s, node_f) )
+                    
 
             f_score[node_s] = g_score[node_s] + min_h # guardamos el costo estimado: costo real(g) + costo faltante estimado(h)
             heapq.heappush(open_set, (f_score[node_s], node_s)) # almacenamos el costo estimado con su respectivo nodo en el heap
@@ -201,10 +202,8 @@ class AIPlayer:
                     came_from[neighbor] = current # le asociamos de donde vino en el mejor camino
                     g_score[neighbor] = current_neighbor_cost # en caso de que si: actualizamos su costo
 
-                    # estimamos cuanto falta hasta un nodo objetivo usando nuestra heuristica dependiendo del jugador
-                    # o sea si vamos left-rigth, top-bottom
-                    if for_player == 1: min_h = self.hex_distance(neighbor, (nr, board.size-1))
-                    else: min_h = self.hex_distance(neighbor, (board.size-1, nc))
+                    # estimamos cuanto falta hasta un nodo objetivo
+                    for node_f in end: min_h = min(min_h, self.hex_distance(neighbor, end))
 
                     f_score[neighbor] = current_neighbor_cost + min_h # estimacion del costo total del camino
 
