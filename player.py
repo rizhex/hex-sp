@@ -12,7 +12,7 @@ class Player:
         return moves[0]
     
 class AIPlayer:
-    def __init__(self, player_id: int, depth: int = 3, not_checked = False):
+    def __init__(self, player_id: int, depth: int = 2, not_checked = True):
         self.player_id = player_id
         self.depth = depth
         self.not_checked = not_checked
@@ -23,8 +23,11 @@ class AIPlayer:
     def play(self, board:HexBoard) -> tuple:
         
         if self.not_checked:
-            if self.is_empty_board(self, board): return self.first_move(board)
             self.not_checked = False
+            if self.is_empty_board(board): 
+                return self.first_move(board)
+                
+        
         best_move = [0,0]
         best_move_eval = -math.inf
         first = True
@@ -34,13 +37,13 @@ class AIPlayer:
                 board_clone = board.clone()
                 best_move = move
                 board_clone.place_piece(best_move[0], best_move[1], self.player_id)
-                best_move_eval = self.minimax(False, -math.inf, math.inf, 2, board_clone)
+                best_move_eval = self.minimax(False, -math.inf, math.inf, self.depth, board_clone)
                 first = False
                 continue
             board_clone = board.clone()
             row, col = move
             board_clone.place_piece(row, col, self.player_id)
-            move_eval = self.minimax(False, -math.inf, math.inf, 2, board_clone)
+            move_eval = self.minimax(False, -math.inf, math.inf, self.depth, board_clone)
           
             if best_move_eval < move_eval:
                 best_move = move
@@ -49,18 +52,20 @@ class AIPlayer:
         print(f"soy ia jugue en {best_move}")
         return best_move
     
-    def is_empty_board(self, board):
-       
-        for node in board:
-            row, col = node
-            if board[row][col] != 0:
-                return False
-        return False
+    def is_empty_board(self, board: HexBoard):
+        
+        for row in board.board:
+            for cell in row:
+                if cell != 0: return False
+            
+        return True
+
+            
 
     def first_move(self, board: HexBoard):
 
-        center_q = board.size // 2
-        center_r = board.size // 2
+        center_q = len(board.board) // 2
+        center_r = len(board.board) // 2
         return (center_q, center_r)
     
     # implementacion de minimax
@@ -125,8 +130,8 @@ class AIPlayer:
         for ia_node in ia_path:
             if ia_node in enemy_path:
                 row, col = ia_node
-                if board.board[row][col] == self.player_id: return 3
-                elif board.board[row][col] == self.enemy_id: return -3
+                if board.board[row][col] == self.player_id: return board.size / 3
+                elif board.board[row][col] == self.enemy_id: return -(board.size / 3)
         return 0
         
     # implementacion de a star para encontrar caminos de costo minimo
