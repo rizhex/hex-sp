@@ -12,33 +12,41 @@ class Player:
         return moves[0]
     
 class AIPlayer:
-    def _init_(self, player_id: int, depth: int = 3):
+    def __init__(self, player_id: int, depth: int = 3, not_checked = False):
         self.player_id = player_id
         self.depth = depth
-        self.not_checked = True
+        self.not_checked = not_checked
         
         if player_id == 1: self.enemy_id = 2
         else: self.enemy_id = 1
-    
+        print(f"soy ia soy player {player_id}")
     def play(self, board:HexBoard) -> tuple:
         
         if self.not_checked:
             if self.is_empty_board(self, board): return self.first_move(board)
             self.not_checked = False
-        
         best_move = [0,0]
         best_move_eval = -math.inf
+        first = True
 
         for move in board.get_possible_moves():
+            if first:
+                board_clone = board.clone()
+                best_move = move
+                board_clone.place_piece(best_move[0], best_move[1], self.player_id)
+                best_move_eval = self.minimax(False, -math.inf, math.inf, 2, board_clone)
+                first = False
+                continue
             board_clone = board.clone()
             row, col = move
             board_clone.place_piece(row, col, self.player_id)
-            move_eval = self.minimax(False, -math.inf, math.inf, 3, board_clone)
-            
+            move_eval = self.minimax(False, -math.inf, math.inf, 2, board_clone)
+          
             if best_move_eval < move_eval:
                 best_move = move
                 best_move_eval = move_eval
-        
+
+        print(f"soy ia jugue en {best_move}")
         return best_move
     
     def is_empty_board(self, board):
@@ -70,8 +78,8 @@ class AIPlayer:
             # recorremos los movimientos disponibles
             for m in moves:
                 board_clone = board.clone() # hacemos una copia del tablero                
-                row, col = m  # separamos la tupla para trabajar mas comodos
-                board.place_piece(row, col, self.player_id) # ponemos ficha en dicho lugar
+                row, col = m  
+                board_clone.place_piece(row, col, self.player_id) # ponemos ficha en dicho lugar
                 
                 current_alpha = max(current_alpha, self.minimax(False, alpha, beta, depth-1, board_clone)) # llamado recursivo
 
@@ -86,7 +94,7 @@ class AIPlayer:
             for m in moves:
                 board_clone = board.clone()
                 row, col = m
-                board.place_piece(row, col, self.enemy_id)
+                board_clone.place_piece(row, col, self.enemy_id)
 
                 current_beta = min(current_beta, self.minimax(True, alpha, beta, depth-1, board_clone))
 
@@ -104,10 +112,12 @@ class AIPlayer:
         
         iap_a_star_score, iap_a_star_path = self.a_star_init(board, self.player_id)
         en_a_star_score, en_a_star_path = self.a_star_init(board, self.enemy_id)
+        
         critical_point_score = self.eval_critical_point(board, iap_a_star_path, en_a_star_path)
-
-        iaplayer_score = self.a_star_init(board, self.player_id) + critical_point_score  # combinacion lineal de intrigas( condiciones, bloqueos, etc) todas positivas
-        enemy_score = self.a_star_init(board, self.enemy_id) # misma intriga
+        iaplayer_score = iap_a_star_score + critical_point_score
+        
+        # combinacion lineal de intrigas( condiciones, bloqueos, etc) todas positivas
+        enemy_score = en_a_star_score # misma intriga
 
         return iaplayer_score - enemy_score 
 
@@ -115,9 +125,9 @@ class AIPlayer:
         for ia_node in ia_path:
             if ia_node in enemy_path:
                 row, col = ia_node
-                if board[row][col] == self.player_id: return 3
-                elif board[row][col] == self.enemy_id: return -3
-                else: return 0
+                if board.board[row][col] == self.player_id: return 3
+                elif board.board[row][col] == self.enemy_id: return -3
+        return 0
         
     # implementacion de a star para encontrar caminos de costo minimo
     def a_star_init(self, board: HexBoard, for_player: int) -> tuple[float, list]: 
@@ -128,28 +138,28 @@ class AIPlayer:
         if for_player == 1:
             for i in range (board.size): 
                     if board.board[i][0] == 2: continue # si la casilla esta tomada por el oponente se ignora
-                    start.append([i, 0])  # almacenamos los nodos inciales
-                    end.append([i, board.size-1]) # almacenamos los nodos finales
+                    start.append((i, 0))  # almacenamos los nodos inciales
+                    end.append((i, board.size-1)) # almacenamos los nodos finales
         else:
             start = []
             for i in range (board.size):
-                        start.append([0, i])
-                        end.append([board.size-1, i]) 
+                        start.append((0, i))
+                        end.append((board.size-1, i)) 
             
         best = self.a_star(board, for_player, start, end)
         best_sc, best_p = best
-        return board.size*10-best_sc, best_p         
+        return board.size-best_sc, best_p         
 
     def a_star(self, board:HexBoard, for_player: int, start: list, end: list) -> tuple[float, list]:
         
         open_set = [] # nodos iniciales
         g_score = {} # costos reales desde el inicio
         f_score = {} # costos estimado, (g + h) h: self.hex_distance
-        came_from = {}
+        came_from = {} # para recoonstruir el camino
         for node_s in start:
             r, c = node_s
             g_score[node_s] = self.get_cost(board, r, c, for_player) # guardamos el coste del nodo inicial
-
+            came_from[node_s] = None
             # encontramos el valor minimo necesario para llegar al otro lado: linea recta, osea el nodo directamente opuesto
             if for_player == 1: min_h = self.hex_distance(node_s, (r, board.size-1))
             else: min_h = self.hex_distance(node_s, (board.size-1, c))
@@ -160,7 +170,7 @@ class AIPlayer:
         open_set_hash = set(start) # para poder verificar elementos en open_set mas eficientemente
 
         while open_set:
-            current = heapq.heappop(open_set)[1] # sacamos un nodo desde el que vamos a empezar a caminar
+            current = heapq.heappop(open_set)[1] # sacamos un el nodo con mejor estimado
             open_set_hash.remove(current) # lo sacamos del hash
 
             # si llegamos al final devolvemos el costo del camino
@@ -180,7 +190,7 @@ class AIPlayer:
                 
                 temp_cost =  self.get_cost(board, nr, nc, for_player)
                 if temp_cost == -1: continue # si el vecino esta ocupado por el enemigo nos lo saltamos
-                current_neighbor_cost = g_score(current) + temp_cost # obetenemos el costo de movernos hacia aqui para el jugador
+                current_neighbor_cost = g_score[current] + temp_cost # obetenemos el costo de movernos hacia aqui para el jugador
                 
                 # verificamos si el nodo es nuevo, o si no es nuevo si llegamos a el con un menor costo(mejor camino)
                 if (neighbor not in g_score) or g_score[neighbor] > current_neighbor_cost: 
@@ -225,7 +235,7 @@ class AIPlayer:
         return neighbors
 
     # implementacion para determinar cuanto cuesta moverse a una determinada casilla
-    def get_cost(self, board:HexBoard, row:int, col:int, for_player: int)-> int:
+    def get_cost(self, board:HexBoard, row:int, col:int, for_player: int)-> float:
         
         if board.board[row][col] == for_player: return 0 # si ya esta controlada por el jugador el costo es 0
         if board.board[row][col] == 0: return 1 # si no esta controlada por ninguno el costo es 1
